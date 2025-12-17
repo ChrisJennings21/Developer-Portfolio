@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bris | .NET Developer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --accent-cyan: #00ffd5;
+            --accent-purple: #a855f7;
+            --accent-blue: #3b82f6;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --border-subtle: rgba(255,255,255,0.06);
+            --glow-cyan: 0 0 40px rgba(0,255,213,0.3);
+            --glow-purple: 0 0 40px rgba(168,85,247,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* Custom Cursor */
+        .cursor {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease, background 0.2s ease;
+            mix-blend-mode: difference;
+        }
+
+        .cursor.hover {
+            transform: scale(2);
+            background: var(--accent-cyan);
+        }
+
+        /* Tech tooltip */
+        .tech-tooltip {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-cyan);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 0 20px rgba(0, 255, 213, 0.2);
+        }
+
+        .tech-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Three.js Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #canvas-container.interactive {
+            z-index: 10;
+        }
+
+        /* Prevent text selection when dragging 3D objects */
+        body.dragging-3d {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body.dragging-3d * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Content fade transition */
+        main {
+            transition: opacity 0.4s ease;
+        }
+
+        main.fading {
+            opacity: 0;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(10,10,15,0.95), transparent);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            letter-spacing: -1px;
+        }
+
+        .logo span {
+            color: var(--text-secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Mobile Menu */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            width: 30px;
+            height: 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 101;
+            padding: 0;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: var(--accent-cyan);
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.98);
+            backdrop-filter: blur(20px);
+            z-index: 99;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mobile-menu a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .mobile-menu a:hover {
+            color: var(--accent-cyan);
+        }
+
+        /* Main Content */
+        main {
+            position: relative;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Re-enable pointer events on interactive elements */
+        main a, main button, main .project-card, main .skill-category, 
+        main .tech-icon, main .contact-link, main .btn, main input, 
+        main textarea, main select {
+            pointer-events: auto;
+        }
+
+        section {
+            min-height: 100vh;
+            padding: 6rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding-top: 8rem;
+            position: relative;
+        }
+
+        .hero-content {
+            max-width: 900px;
+        }
+
+        .hero-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .hero-label::before {
+            content: '';
+            width: 30px;
+            height: 1px;
+            background: var(--accent-cyan);
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 800;
+            line-height: 1.05;
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.2s forwards;
+        }
+
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.4s forwards;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.6s forwards;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--glow-cyan);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            display: flex;
+            gap: 2rem;
+            margin-top: 4rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.8s forwards;
+        }
+
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tech-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            transition: all 0.3s ease;
+        }
+
+        .tech-icon:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            transform: translateY(-4px);
+        }
+
+        .tech-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Section Headers */
+        .section-header {
+            margin-bottom: 4rem;
+        }
+
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-purple);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 30px;
+            height: 1px;
+            background: var(--accent-purple);
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+        }
+
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+        }
+
+        .project-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(0,255,213,0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .project-card:hover::before {
+            opacity: 1;
+        }
+
+        .project-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+        }
+
+        .project-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .project-tech {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .project-tech span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(0,255,213,0.1);
+            color: var(--accent-cyan);
+            border-radius: 4px;
+        }
+
+        /* Skills Section */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+        }
+
+        .skill-category {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .skill-category:hover {
+            border-color: var(--accent-purple);
+        }
+
+        .skill-category h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .skill-category h3::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-purple);
+            border-radius: 2px;
+        }
+
+        .skill-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .skill-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .skill-bar {
+            width: 120px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .skill-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 2px;
+            transition: width 1s ease;
+        }
+
+        /* Experience Timeline */
+        .experience-container {
+            max-width: 900px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 3rem;
+            padding-bottom: 3rem;
+            border-left: 2px solid var(--border-subtle);
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+            border-left-color: transparent;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 0;
+            width: 14px;
+            height: 14px;
+            background: var(--bg-dark);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 50%;
+        }
+
+        .timeline-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-company {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .timeline-description {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Contact Section */
+        .contact-content {
+            max-width: 700px;
+        }
+
+        .contact-description {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+
+        .contact-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            transform: translateY(-2px);
+        }
+
+        .contact-link svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--accent-cyan);
+        }
+
+        /* Footer */
+        footer {
+            padding: 2rem 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        /* Floating Elements */
+        .floating-element {
+            position: fixed;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-element.circle-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0,255,213,0.1) 0%, transparent 70%);
+            top: 20%;
+            right: 10%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .floating-element.circle-2 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(168,85,247,0.1) 0%, transparent 70%);
+            bottom: 20%;
+            left: 5%;
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20px, -20px); }
+        }
+
+        /* Scroll animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 1.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .menu-toggle {
+                display: flex;
+            }
+
+            .mobile-menu {
+                display: flex;
+            }
+
+            section {
+                padding: 4rem 1.5rem;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tech-stack {
+                flex-wrap: wrap;
+            }
+
+            .contact-links {
+                flex-direction: column;
+            }
+
+            /* Hide custom cursor on touch devices */
+            .cursor {
+                display: none;
+            }
+        }
+
+        /* Code Block Styling */
+        .code-window {
+            background: #1a1a24;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            margin-top: 2rem;
+        }
+
+        .code-header {
+            background: rgba(255,255,255,0.05);
+            padding: 0.75rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .code-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .code-dot.red { background: #ff5f56; }
+        .code-dot.yellow { background: #ffbd2e; }
+        .code-dot.green { background: #27ca40; }
+
+        .code-content {
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+
+        .code-content .keyword { color: var(--accent-purple); }
+        .code-content .type { color: var(--accent-cyan); }
+        .code-content .string { color: #a5d6a7; }
+        .code-content .comment { color: var(--text-secondary); }
+        .code-content .method { color: #ffd54f; }
+    </style>
+</head>
+<body>
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+    
+    <!-- Tech Tooltip -->
+    <div class="tech-tooltip" id="tech-tooltip"></div>
+
+    <!-- Three.js Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Floating Background Elements -->
+    <div class="floating-element circle-1"></div>
+    <div class="floating-element circle-2"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <a href="#" class="logo">&lt;bris<span>/&gt;</span></a>
+        <ul class="nav-links">
+            <li><a href="#about">About</a></li>
+            <li><a href="#projects">Projects</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#experience">Experience</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+        <button class="menu-toggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <a href="#about">About</a>
+        <a href="#projects">Projects</a>
+        <a href="#skills">Skills</a>
+        <a href="#experience">Experience</a>
+        <a href="#contact">Contact</a>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero" id="about">
+            <div class="hero-content">
+                <div class="hero-label">Full-Stack .NET Developer</div>
+                <h1>Building <span class="gradient">enterprise solutions</span> with clean code</h1>
+                <p class="hero-description">
+                    I craft robust, scalable applications using .NET and Vue.js. 
+                    Specializing in document management systems, authentication architectures, 
+                    and complex PDF processing solutions.
+                </p>
+                <div class="hero-cta">
+                    <a href="#projects" class="btn btn-primary">View Projects</a>
+                    <a href="#contact" class="btn btn-secondary">Get In Touch</a>
+                </div>
+                <div class="tech-stack">
+                    <div class="tech-item">
+                        <div class="tech-icon">.NET</div>
+                        <span class="tech-label">Backend</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">Vue</div>
+                        <span class="tech-label">Frontend</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">SQL</div>
+                        <span class="tech-label">Database</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">Azure</div>
+                        <span class="tech-label">Cloud</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Preview -->
+        <section style="padding-top: 0;">
+            <div class="code-window reveal">
+                <div class="code-header">
+                    <div class="code-dot red"></div>
+                    <div class="code-dot yellow"></div>
+                    <div class="code-dot green"></div>
+                </div>
+                <div class="code-content">
+                    <span class="comment">// What I do best</span><br>
+                    <span class="keyword">public async</span> <span class="type">Task&lt;Solution&gt;</span> <span class="method">BuildAsync</span>(<span class="type">Challenge</span> challenge)<br>
+                    {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">var</span> approach = <span class="keyword">await</span> <span class="method">AnalyzeRequirements</span>(challenge);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">var</span> architecture = <span class="method">DesignCleanArchitecture</span>(approach);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">var</span> code = <span class="method">WriteTestableCode</span>(architecture);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return new</span> <span class="type">Solution</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Quality = <span class="type">QualityLevel</span>.Production,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Maintainability = <span class="keyword">true</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Documentation = <span class="string">"Comprehensive"</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;};<br>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects">
+            <div class="section-header reveal">
+                <div class="section-label">Featured Work</div>
+                <h2 class="section-title">Projects & Contributions</h2>
+            </div>
+            <div class="projects-grid">
+                <div class="project-card reveal">
+                    <div class="project-number">01</div>
+                    <h3 class="project-title">Document Management Platform</h3>
+                    <p class="project-description">
+                        Enterprise-grade document management system with complex PDF processing, 
+                        multi-tenant architecture, and cabinet-based storage. Handles encryption, 
+                        large format documents, and automated indexing.
+                    </p>
+                    <div class="project-tech">
+                        <span>.NET 8</span>
+                        <span>Vue 3</span>
+                        <span>SQL Server</span>
+                        <span>GdPicture</span>
+                    </div>
+                </div>
+                <div class="project-card reveal">
+                    <div class="project-number">02</div>
+                    <h3 class="project-title">Identity Server Implementation</h3>
+                    <p class="project-description">
+                        Custom authentication system using OpenIddict with JWT tokens, 
+                        certificate rotation, and OAuth 2.0 integrations including 
+                        iManage Work document management connections.
+                    </p>
+                    <div class="project-tech">
+                        <span>OpenIddict</span>
+                        <span>OAuth 2.0</span>
+                        <span>JWT</span>
+                        <span>X.509</span>
+                    </div>
+                </div>
+                <div class="project-card reveal">
+                    <div class="project-number">03</div>
+                    <h3 class="project-title">Vue.js Component Library</h3>
+                    <p class="project-description">
+                        Sophisticated data table components with PrimeVue featuring 
+                        virtual scrolling, advanced filtering, column customization, 
+                        and optimized rendering for large datasets.
+                    </p>
+                    <div class="project-tech">
+                        <span>Vue 3</span>
+                        <span>TypeScript</span>
+                        <span>PrimeVue</span>
+                        <span>Vite</span>
+                    </div>
+                </div>
+                <div class="project-card reveal">
+                    <div class="project-number">04</div>
+                    <h3 class="project-title">Database Optimization Suite</h3>
+                    <p class="project-description">
+                        Performance-optimized stored procedures and triggers for 
+                        document indexing workflows. Includes complex query optimization 
+                        and efficient data retrieval patterns.
+                    </p>
+                    <div class="project-tech">
+                        <span>SQL Server</span>
+                        <span>T-SQL</span>
+                        <span>Indexing</span>
+                        <span>Performance</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills">
+            <div class="section-header reveal">
+                <div class="section-label">Technical Expertise</div>
+                <h2 class="section-title">Skills & Technologies</h2>
+            </div>
+            <div class="skills-container">
+                <div class="skill-category reveal">
+                    <h3>Backend Development</h3>
+                    <div class="skill-list">
+                        <div class="skill-item">
+                            <span class="skill-name">C# / .NET Core</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">ASP.NET Web API</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">Entity Framework</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 88%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">OpenIddict / OAuth</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skill-category reveal">
+                    <h3>Frontend Development</h3>
+                    <div class="skill-list">
+                        <div class="skill-item">
+                            <span class="skill-name">Vue.js 3</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 92%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">TypeScript</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">PrimeVue / CSS</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 88%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">Vite / Webpack</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 80%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skill-category reveal">
+                    <h3>Database & Cloud</h3>
+                    <div class="skill-list">
+                        <div class="skill-item">
+                            <span class="skill-name">SQL Server</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">T-SQL / Stored Procs</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">Azure DevOps</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 82%"></div>
+                            </div>
+                        </div>
+                        <div class="skill-item">
+                            <span class="skill-name">CI/CD Pipelines</span>
+                            <div class="skill-bar">
+                                <div class="skill-progress" style="width: 78%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Experience Section -->
+        <section id="experience">
+            <div class="section-header reveal">
+                <div class="section-label">Career Journey</div>
+                <h2 class="section-title">Professional Experience</h2>
+            </div>
+            <div class="experience-container">
+                <div class="timeline-item reveal">
+                    <div class="timeline-date">2020 — Present</div>
+                    <h3 class="timeline-title">Software Developer</h3>
+                    <div class="timeline-company">Document Management Solutions</div>
+                    <p class="timeline-description">
+                        Leading development of enterprise document management systems using .NET and Vue.js. 
+                        Architecting complex PDF processing pipelines, implementing secure authentication 
+                        systems with OpenIddict, and optimizing database performance for high-volume 
+                        document workflows.
+                    </p>
+                </div>
+                <div class="timeline-item reveal">
+                    <div class="timeline-date">2019 — 2020</div>
+                    <h3 class="timeline-title">Junior Developer</h3>
+                    <div class="timeline-company">Software Development</div>
+                    <p class="timeline-description">
+                        Built foundational skills in .NET Framework and web development. 
+                        Contributed to legacy application modernization efforts and 
+                        gained experience with enterprise software practices.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact">
+            <div class="section-header reveal">
+                <div class="section-label">Let's Connect</div>
+                <h2 class="section-title">Get In Touch</h2>
+            </div>
+            <div class="contact-content">
+                <p class="contact-description reveal">
+                    I'm always interested in challenging projects and opportunities 
+                    to build impactful software. Whether you have a question or just 
+                    want to say hi, feel free to reach out.
+                </p>
+                <div class="contact-links reveal">
+                    <a href="mailto:hello@example.com" class="contact-link">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                        Email Me
+                    </a>
+                    <a href="https://github.com" class="contact-link" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <a href="https://linkedin.com" class="contact-link" target="_blank">
+                        <svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Designed & Built with <span style="color: var(--accent-cyan);">♥</span> — © 2024</p>
+    </footer>
+
+    <script>
+        // Custom Cursor
+        const cursor = document.querySelector('.cursor');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            cursor.style.left = cursorX - 10 + 'px';
+            cursor.style.top = cursorY - 10 + 'px';
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // Cursor hover effect
+        const hoverElements = document.querySelectorAll('a, button, .project-card, .skill-category, .tech-icon');
+        hoverElements.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // Three.js Background
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // Raycaster for interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredObject = null;
+        let selectedObject = null;
+        let isDragging = false;
+        let dragOffset = new THREE.Vector3();
+
+        // Warp drive state
+        let isWarping = false;
+        let warpProgress = 0;
+        let warpSpeed = 0;
+        const maxWarpSpeed = 2.5;
+
+        // Create star/particle system for warp effect
+        const particleCount = 2000;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const posArray = new Float32Array(particleCount * 3);
+        const velocities = new Float32Array(particleCount * 3);
+        const starColors = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i += 3) {
+            const radius = 2 + Math.random() * 12;
+            const theta = Math.random() * Math.PI * 2;
+            
+            posArray[i] = Math.cos(theta) * radius;
+            posArray[i + 1] = Math.sin(theta) * radius;
+            posArray[i + 2] = (Math.random() - 0.5) * 40;
+            
+            velocities[i] = (Math.random() - 0.5) * 0.005;
+            velocities[i + 1] = (Math.random() - 0.5) * 0.005;
+            velocities[i + 2] = (Math.random() - 0.5) * 0.005;
+
+            const colorChoice = Math.random();
+            if (colorChoice < 0.5) {
+                starColors[i] = 0;
+                starColors[i + 1] = 1;
+                starColors[i + 2] = 0.83;
+            } else if (colorChoice < 0.8) {
+                starColors[i] = 0.66;
+                starColors[i + 1] = 0.33;
+                starColors[i + 2] = 0.97;
+            } else {
+                starColors[i] = 1;
+                starColors[i + 1] = 1;
+                starColors[i + 2] = 1;
+            }
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.03,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // Create warp streak lines
+        const streakCount = 300;
+        const streakGeometry = new THREE.BufferGeometry();
+        const streakPositions = new Float32Array(streakCount * 6);
+        const streakColors = new Float32Array(streakCount * 6);
+        const streakData = [];
+
+        for (let i = 0; i < streakCount; i++) {
+            const radius = 1 + Math.random() * 10;
+            const theta = Math.random() * Math.PI * 2;
+            const x = Math.cos(theta) * radius;
+            const y = Math.sin(theta) * radius;
+            const z = (Math.random() - 0.5) * 30;
+            
+            streakData.push({ x, y, z, baseZ: z, speed: 0.5 + Math.random() * 1.5 });
+
+            const idx = i * 6;
+            streakPositions[idx] = x;
+            streakPositions[idx + 1] = y;
+            streakPositions[idx + 2] = z;
+            streakPositions[idx + 3] = x;
+            streakPositions[idx + 4] = y;
+            streakPositions[idx + 5] = z;
+
+            const colorChoice = Math.random();
+            let r, g, b;
+            if (colorChoice < 0.6) { r = 0; g = 1; b = 0.83; }
+            else if (colorChoice < 0.85) { r = 0.66; g = 0.33; b = 0.97; }
+            else { r = 1; g = 1; b = 1; }
+            
+            streakColors[idx] = r; streakColors[idx + 1] = g; streakColors[idx + 2] = b;
+            streakColors[idx + 3] = r; streakColors[idx + 4] = g; streakColors[idx + 5] = b;
+        }
+
+        streakGeometry.setAttribute('position', new THREE.BufferAttribute(streakPositions, 3));
+        streakGeometry.setAttribute('color', new THREE.BufferAttribute(streakColors, 3));
+
+        const streakMaterial = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending
+        });
+
+        const streakLines = new THREE.LineSegments(streakGeometry, streakMaterial);
+        scene.add(streakLines);
+
+        // Tunnel rings
+        const ringCount = 8;
+        const rings = [];
+        for (let i = 0; i < ringCount; i++) {
+            const ringGeometry = new THREE.RingGeometry(8, 8.1, 64);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ffd5,
+                transparent: true,
+                opacity: 0,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.z = -20 - i * 8;
+            rings.push(ring);
+            scene.add(ring);
+        }
+
+        // Interactive objects array
+        const interactiveObjects = [];
+
+        // ============================================
+        // TECH LOGO SHAPES
+        // ============================================
+
+        // Helper function to create extruded shape from points
+        function createLogoShape(points, depth = 0.15) {
+            const shape = new THREE.Shape();
+            shape.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                shape.lineTo(points[i][0], points[i][1]);
+            }
+            shape.closePath();
+            
+            const extrudeSettings = {
+                steps: 1,
+                depth: depth,
+                bevelEnabled: false
+            };
+            
+            return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        }
+
+        // --- VUE.JS LOGO (V shape) --- TOP LEFT
+        const vueOuterPoints = [
+            [0, 1.5], [-1.3, -0.8], [-0.8, -0.8], [0, 0.5], [0.8, -0.8], [1.3, -0.8]
+        ];
+        const vueGeometry = createLogoShape(vueOuterPoints, 0.1);
+        const vueMaterial = new THREE.MeshBasicMaterial({
+            color: 0x42b883,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.DoubleSide
+        });
+        const vueLogo = new THREE.Mesh(vueGeometry, vueMaterial);
+        vueLogo.position.set(-7, 3, -4);
+        vueLogo.rotation.z = Math.PI;
+        vueLogo.scale.set(0.8, 0.8, 0.8);
+        vueLogo.userData = {
+            name: 'Vue.js',
+            baseOpacity: 0.15,
+            hoverOpacity: 0.4,
+            baseColor: 0x42b883,
+            hoverColor: 0x42b883,
+            baseScale: 0.8,
+            rotationSpeed: { x: 0.002, y: 0.003 },
+            originalPosition: new THREE.Vector3(-7, 3, -4),
+            originalRotation: new THREE.Euler(0, 0, Math.PI),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.8,
+            wanderRadius: 2.5,
+            wanderFreqX: 1.0,
+            wanderFreqX2: 0.6,
+            wanderFreqY: 0.7,
+            wanderFreqY2: 0.4,
+            wanderFreqZ: 0.3,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.4
+        };
+        scene.add(vueLogo);
+        interactiveObjects.push(vueLogo);
+
+        // --- VISUAL STUDIO LOGO --- TOP RIGHT
+        const vsGeometry = new THREE.TorusKnotGeometry(0.8, 0.25, 64, 8, 2, 3);
+        const vsMaterial = new THREE.MeshBasicMaterial({
+            color: 0x854cc7,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.12
+        });
+        const vsLogo = new THREE.Mesh(vsGeometry, vsMaterial);
+        vsLogo.position.set(8, 4, -6);
+        vsLogo.scale.set(0.7, 0.7, 0.7);
+        vsLogo.userData = {
+            name: 'Visual Studio',
+            baseOpacity: 0.12,
+            hoverOpacity: 0.35,
+            baseColor: 0x854cc7,
+            hoverColor: 0xb97eff,
+            baseScale: 0.7,
+            rotationSpeed: { x: 0.003, y: 0.002 },
+            originalPosition: new THREE.Vector3(8, 4, -6),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.5,
+            wanderRadius: 3,
+            wanderFreqX: 0.8,
+            wanderFreqX2: 1.2,
+            wanderFreqY: 0.5,
+            wanderFreqY2: 0.9,
+            wanderFreqZ: 0.4,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.5
+        };
+        scene.add(vsLogo);
+        interactiveObjects.push(vsLogo);
+
+        // --- ANGULAR LOGO --- BOTTOM RIGHT
+        const angularPoints = [
+            [0, 1.6],
+            [-1.2, -1.2],
+            [-0.7, -1.2],
+            [0, 0.3],
+            [0.7, -1.2],
+            [1.2, -1.2]
+        ];
+        const angularGeometry = createLogoShape(angularPoints, 0.12);
+        const angularMaterial = new THREE.MeshBasicMaterial({
+            color: 0xdd0031,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.DoubleSide
+        });
+        const angularLogo = new THREE.Mesh(angularGeometry, angularMaterial);
+        angularLogo.position.set(6, -3, -3);
+        angularLogo.scale.set(0.6, 0.6, 0.6);
+        angularLogo.userData = {
+            name: 'Angular',
+            baseOpacity: 0.15,
+            hoverOpacity: 0.4,
+            baseColor: 0xdd0031,
+            hoverColor: 0xff4057,
+            baseScale: 0.6,
+            rotationSpeed: { x: 0.002, y: 0.004 },
+            originalPosition: new THREE.Vector3(6, -3, -3),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 1.2,
+            wanderRadius: 2,
+            wanderFreqX: 1.3,
+            wanderFreqX2: 0.4,
+            wanderFreqY: 0.9,
+            wanderFreqY2: 0.6,
+            wanderFreqZ: 0.5,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.45
+        };
+        scene.add(angularLogo);
+        interactiveObjects.push(angularLogo);
+
+        // --- PYTHON LOGO --- LEFT MIDDLE
+        const pythonGroup = new THREE.Group();
+        
+        const helixCurve1Points = [];
+        const helixCurve2Points = [];
+        const helixTurns = 2;
+        const helixHeight = 2;
+        const helixRadius = 0.5;
+        
+        for (let i = 0; i <= 50; i++) {
+            const t = i / 50;
+            const angle = t * Math.PI * 2 * helixTurns;
+            const y = (t - 0.5) * helixHeight;
+            
+            helixCurve1Points.push(new THREE.Vector3(
+                Math.cos(angle) * helixRadius,
+                y,
+                Math.sin(angle) * helixRadius
+            ));
+            
+            helixCurve2Points.push(new THREE.Vector3(
+                Math.cos(angle + Math.PI) * helixRadius,
+                y,
+                Math.sin(angle + Math.PI) * helixRadius
+            ));
+        }
+        
+        const helixCurve1 = new THREE.CatmullRomCurve3(helixCurve1Points);
+        const helixCurve2 = new THREE.CatmullRomCurve3(helixCurve2Points);
+        
+        const tubeGeometry1 = new THREE.TubeGeometry(helixCurve1, 50, 0.08, 8, false);
+        const tubeGeometry2 = new THREE.TubeGeometry(helixCurve2, 50, 0.08, 8, false);
+        
+        const pythonMaterial1 = new THREE.MeshBasicMaterial({
+            color: 0x3776ab,
+            transparent: true,
+            opacity: 0.2
+        });
+        const pythonMaterial2 = new THREE.MeshBasicMaterial({
+            color: 0xffd43b,
+            transparent: true,
+            opacity: 0.2
+        });
+        
+        const helix1 = new THREE.Mesh(tubeGeometry1, pythonMaterial1);
+        const helix2 = new THREE.Mesh(tubeGeometry2, pythonMaterial2);
+        
+        pythonGroup.add(helix1);
+        pythonGroup.add(helix2);
+        pythonGroup.position.set(-9, 0, -5);
+        pythonGroup.scale.set(0.9, 0.9, 0.9);
+        pythonGroup.userData = {
+            name: 'Python',
+            baseOpacity: 0.2,
+            hoverOpacity: 0.5,
+            baseColor: 0x3776ab,
+            hoverColor: 0x4b8bbe,
+            baseScale: 0.9,
+            rotationSpeed: { x: 0.001, y: 0.005 },
+            originalPosition: new THREE.Vector3(-9, 0, -5),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.6,
+            wanderRadius: 2.8,
+            wanderFreqX: 0.7,
+            wanderFreqX2: 1.1,
+            wanderFreqY: 0.4,
+            wanderFreqY2: 0.8,
+            wanderFreqZ: 0.25,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.35,
+            isGroup: true,
+            materials: [pythonMaterial1, pythonMaterial2]
+        };
+        scene.add(pythonGroup);
+        interactiveObjects.push(pythonGroup);
+
+        // --- .NET LOGO --- TOP CENTER
+        const dotNetGroup = new THREE.Group();
+        
+        const dotGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+        const dotMaterial = new THREE.MeshBasicMaterial({
+            color: 0x512bd4,
+            transparent: true,
+            opacity: 0.25
+        });
+        const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+        dot.position.set(-0.6, 0, 0);
+        dotNetGroup.add(dot);
+        
+        const netGeometry = new THREE.IcosahedronGeometry(0.6, 0);
+        const netMaterial = new THREE.MeshBasicMaterial({
+            color: 0x512bd4,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.2
+        });
+        const net = new THREE.Mesh(netGeometry, netMaterial);
+        net.position.set(0.4, 0, 0);
+        dotNetGroup.add(net);
+        
+        dotNetGroup.position.set(0, 5, -7);
+        dotNetGroup.scale.set(1.2, 1.2, 1.2);
+        dotNetGroup.userData = {
+            name: '.NET',
+            baseOpacity: 0.2,
+            hoverOpacity: 0.5,
+            baseColor: 0x512bd4,
+            hoverColor: 0x7b5cd6,
+            baseScale: 1.2,
+            rotationSpeed: { x: 0.003, y: 0.002 },
+            originalPosition: new THREE.Vector3(0, 5, -7),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.4,
+            wanderRadius: 3.5,
+            wanderFreqX: 0.9,
+            wanderFreqX2: 0.5,
+            wanderFreqY: 0.3,
+            wanderFreqY2: 0.7,
+            wanderFreqZ: 0.2,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.5,
+            isGroup: true,
+            materials: [dotMaterial, netMaterial]
+        };
+        scene.add(dotNetGroup);
+        interactiveObjects.push(dotNetGroup);
+
+        // --- SQL DATABASE --- RIGHT MIDDLE
+        const sqlGroup = new THREE.Group();
+        
+        for (let i = 0; i < 3; i++) {
+            const cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.25, 16, 1, true);
+            const cylinderMaterial = new THREE.MeshBasicMaterial({
+                color: 0xf29111,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+            cylinder.position.y = i * 0.3 - 0.3;
+            sqlGroup.add(cylinder);
+        }
+        
+        const capGeometry = new THREE.CircleGeometry(0.5, 16);
+        const capMaterial = new THREE.MeshBasicMaterial({
+            color: 0xf29111,
+            transparent: true,
+            opacity: 0.1,
+            side: THREE.DoubleSide
+        });
+        const topCap = new THREE.Mesh(capGeometry, capMaterial);
+        topCap.rotation.x = -Math.PI / 2;
+        topCap.position.y = 0.45;
+        sqlGroup.add(topCap);
+        
+        sqlGroup.position.set(10, 0, -5);
+        sqlGroup.scale.set(0.9, 0.9, 0.9);
+        sqlGroup.userData = {
+            name: 'SQL Server',
+            baseOpacity: 0.15,
+            hoverOpacity: 0.4,
+            baseColor: 0xf29111,
+            hoverColor: 0xffaa33,
+            baseScale: 0.9,
+            rotationSpeed: { x: 0.001, y: 0.004 },
+            originalPosition: new THREE.Vector3(10, 0, -5),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.7,
+            wanderRadius: 2.2,
+            wanderFreqX: 1.1,
+            wanderFreqX2: 0.8,
+            wanderFreqY: 0.6,
+            wanderFreqY2: 1.0,
+            wanderFreqZ: 0.35,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.4,
+            isGroup: true,
+            materials: sqlGroup.children.map(c => c.material)
+        };
+        scene.add(sqlGroup);
+        interactiveObjects.push(sqlGroup);
+
+        // --- TYPESCRIPT LOGO --- BOTTOM LEFT
+        const tsGroup = new THREE.Group();
+        
+        // TS square background
+        const tsBoxGeometry = new THREE.BoxGeometry(1.2, 1.2, 0.1);
+        const tsBoxMaterial = new THREE.MeshBasicMaterial({
+            color: 0x3178c6,
+            transparent: true,
+            opacity: 0.15
+        });
+        const tsBox = new THREE.Mesh(tsBoxGeometry, tsBoxMaterial);
+        tsGroup.add(tsBox);
+        
+        // T shape
+        const tVerticalGeometry = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+        const tMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3
+        });
+        const tVertical = new THREE.Mesh(tVerticalGeometry, tMaterial);
+        tVertical.position.set(-0.2, -0.05, 0.1);
+        tsGroup.add(tVertical);
+        
+        const tHorizontalGeometry = new THREE.BoxGeometry(0.5, 0.12, 0.15);
+        const tHorizontal = new THREE.Mesh(tHorizontalGeometry, tMaterial.clone());
+        tHorizontal.position.set(-0.2, 0.3, 0.1);
+        tsGroup.add(tHorizontal);
+        
+        tsGroup.position.set(-6, -4, -4);
+        tsGroup.scale.set(0.8, 0.8, 0.8);
+        tsGroup.userData = {
+            name: 'TypeScript',
+            baseOpacity: 0.15,
+            hoverOpacity: 0.4,
+            baseColor: 0x3178c6,
+            hoverColor: 0x5a9bd5,
+            baseScale: 0.8,
+            rotationSpeed: { x: 0.002, y: 0.003 },
+            originalPosition: new THREE.Vector3(-6, -4, -4),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.9,
+            wanderRadius: 2.3,
+            wanderFreqX: 0.6,
+            wanderFreqX2: 1.0,
+            wanderFreqY: 0.8,
+            wanderFreqY2: 0.5,
+            wanderFreqZ: 0.4,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.38,
+            isGroup: true,
+            materials: [tsBoxMaterial, tMaterial]
+        };
+        scene.add(tsGroup);
+        interactiveObjects.push(tsGroup);
+
+        // --- AZURE CLOUD --- BOTTOM CENTER
+        const azureGeometry = new THREE.IcosahedronGeometry(0.9, 1);
+        const azureMaterial = new THREE.MeshBasicMaterial({
+            color: 0x0089d6,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.12
+        });
+        const azureLogo = new THREE.Mesh(azureGeometry, azureMaterial);
+        azureLogo.position.set(0, -4, -5);
+        azureLogo.scale.set(1, 1, 1);
+        azureLogo.userData = {
+            name: 'Azure',
+            baseOpacity: 0.12,
+            hoverOpacity: 0.35,
+            baseColor: 0x0089d6,
+            hoverColor: 0x00b4ff,
+            baseScale: 1,
+            rotationSpeed: { x: 0.003, y: 0.002 },
+            originalPosition: new THREE.Vector3(0, -4, -5),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.55,
+            wanderRadius: 3,
+            wanderFreqX: 1.2,
+            wanderFreqX2: 0.7,
+            wanderFreqY: 0.5,
+            wanderFreqY2: 0.3,
+            wanderFreqZ: 0.45,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.42
+        };
+        scene.add(azureLogo);
+        interactiveObjects.push(azureLogo);
+
+        // ============================================
+        // DECORATIVE GEOMETRIC SHAPES (background)
+        // ============================================
+
+        const torusKnotGeometry = new THREE.TorusKnotGeometry(2, 0.3, 100, 12);
+        const torusKnotMaterial = new THREE.MeshBasicMaterial({
+            color: 0xa855f7, wireframe: true, transparent: true, opacity: 0.05
+        });
+        const torusKnot = new THREE.Mesh(torusKnotGeometry, torusKnotMaterial);
+        torusKnot.position.set(12, 3, -12);
+        torusKnot.userData = {
+            name: '',
+            baseOpacity: 0.05,
+            hoverOpacity: 0.15,
+            baseColor: 0xa855f7,
+            hoverColor: 0x00ffd5,
+            baseScale: 1,
+            rotationSpeed: { x: 0.001, y: 0.002 },
+            originalPosition: new THREE.Vector3(12, 3, -12),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.3,
+            wanderRadius: 2.5,
+            wanderFreqX: 0.5,
+            wanderFreqX2: 0.9,
+            wanderFreqY: 0.4,
+            wanderFreqY2: 0.6,
+            wanderFreqZ: 0.2
+        };
+        scene.add(torusKnot);
+        interactiveObjects.push(torusKnot);
+
+        const icoGeometry = new THREE.IcosahedronGeometry(1.8, 1);
+        const icoMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ffd5, wireframe: true, transparent: true, opacity: 0.06
+        });
+        const icosahedron = new THREE.Mesh(icoGeometry, icoMaterial);
+        icosahedron.position.set(-12, -2, -10);
+        icosahedron.userData = {
+            name: '',
+            baseOpacity: 0.06,
+            hoverOpacity: 0.18,
+            baseColor: 0x00ffd5,
+            hoverColor: 0xa855f7,
+            baseScale: 1,
+            rotationSpeed: { x: 0.002, y: 0.001 },
+            originalPosition: new THREE.Vector3(-12, -2, -10),
+            originalRotation: new THREE.Euler(0, 0, 0),
+            spinBoost: 0,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.35,
+            wanderRadius: 3,
+            wanderFreqX: 0.8,
+            wanderFreqX2: 0.4,
+            wanderFreqY: 0.6,
+            wanderFreqY2: 0.9,
+            wanderFreqZ: 0.3
+        };
+        scene.add(icosahedron);
+        interactiveObjects.push(icosahedron);
+
+        camera.position.z = 6;
+
+        let targetX = 0, targetY = 0;
+
+        // Tooltip element
+        const techTooltip = document.getElementById('tech-tooltip');
+
+        // Mouse interaction handlers
+        function onMouseMove(event) {
+            // Update mouse for camera movement
+            targetX = (event.clientX / window.innerWidth - 0.5) * 0.5;
+            targetY = (event.clientY / window.innerHeight - 0.5) * 0.5;
+            
+            // Update mouse for raycasting
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Handle dragging
+            if (isDragging && selectedObject) {
+                raycaster.setFromCamera(mouse, camera);
+                const planeZ = selectedObject.position.z;
+                const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
+                const intersection = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, intersection);
+                
+                if (intersection) {
+                    selectedObject.position.x = intersection.x + dragOffset.x;
+                    selectedObject.position.y = intersection.y + dragOffset.y;
+                }
+                return;
+            }
+
+            // Raycast for hover detection
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            // Find the parent interactive object if we hit a child
+            let hitObject = null;
+            if (intersects.length > 0) {
+                hitObject = intersects[0].object;
+                // Check if it's a child of a group
+                while (hitObject && !hitObject.userData.name && hitObject.parent) {
+                    hitObject = hitObject.parent;
+                }
+                // Make sure it's in our interactive objects
+                if (!interactiveObjects.includes(hitObject)) {
+                    hitObject = null;
+                }
+            }
+
+            // Reset previous hover
+            if (hoveredObject && hitObject !== hoveredObject) {
+                hoveredObject = null;
+                document.body.style.cursor = 'default';
+                cursor.classList.remove('hover');
+                techTooltip.classList.remove('visible');
+            }
+
+            // Set new hover
+            if (hitObject) {
+                hoveredObject = hitObject;
+                document.body.style.cursor = 'grab';
+                cursor.classList.add('hover');
+                
+                // Show tooltip with tech name
+                if (hitObject.userData.name) {
+                    techTooltip.textContent = hitObject.userData.name;
+                    techTooltip.style.left = (event.clientX + 20) + 'px';
+                    techTooltip.style.top = (event.clientY - 10) + 'px';
+                    techTooltip.classList.add('visible');
+                }
+            }
+        }
+
+        function onMouseDown(event) {
+            if (hoveredObject) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                selectedObject = hoveredObject;
+                isDragging = true;
+                document.body.style.cursor = 'grabbing';
+                document.body.classList.add('dragging-3d');
+                techTooltip.classList.remove('visible');
+                
+                // Calculate drag offset
+                raycaster.setFromCamera(mouse, camera);
+                const planeZ = selectedObject.position.z;
+                const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
+                const intersection = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, intersection);
+                
+                if (intersection) {
+                    dragOffset.x = selectedObject.position.x - intersection.x;
+                    dragOffset.y = selectedObject.position.y - intersection.y;
+                }
+                
+                // Add spin boost on grab
+                selectedObject.userData.spinBoost = 0.05;
+            }
+        }
+
+        function onMouseUp(event) {
+            if (isDragging && selectedObject) {
+                document.body.style.cursor = hoveredObject ? 'grab' : 'default';
+                document.body.classList.remove('dragging-3d');
+                isDragging = false;
+                selectedObject = null;
+            }
+        }
+
+        function onDoubleClick(event) {
+            if (hoveredObject) {
+                // Reset to original position with animation
+                const obj = hoveredObject;
+                const originalPos = obj.userData.originalPosition;
+                
+                // Add extra spin
+                obj.userData.spinBoost = 0.2;
+                
+                // Animate back to original position
+                const startPos = obj.position.clone();
+                const startTime = Date.now();
+                const duration = 800;
+                
+                function animateBack() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3); // ease out cubic
+                    
+                    obj.position.lerpVectors(startPos, originalPos, eased);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateBack);
+                    }
+                }
+                animateBack();
+            }
+        }
+
+        // Add event listeners - Mouse
+        container.addEventListener('mousemove', onMouseMove);
+        container.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
+        container.addEventListener('dblclick', onDoubleClick);
+        
+        // Add event listeners - Touch (for mobile)
+        container.addEventListener('touchstart', onTouchStart, { passive: false });
+        container.addEventListener('touchmove', onTouchMove, { passive: false });
+        container.addEventListener('touchend', onTouchEnd);
+        
+        // Prevent context menu on right click in canvas area
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Touch event handlers
+        let lastTouchTime = 0;
+
+        function onTouchStart(event) {
+            if (event.touches.length === 1) {
+                const touch = event.touches[0];
+                
+                // Update mouse position for raycasting
+                mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+                
+                // Raycast for touch detection
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(interactiveObjects);
+                
+                if (intersects.length > 0) {
+                    event.preventDefault();
+                    
+                    // Check for double tap
+                    const now = Date.now();
+                    if (now - lastTouchTime < 300 && hoveredObject === intersects[0].object) {
+                        onDoubleTap(intersects[0].object);
+                        lastTouchTime = 0;
+                        return;
+                    }
+                    lastTouchTime = now;
+                    
+                    hoveredObject = intersects[0].object;
+                    selectedObject = hoveredObject;
+                    isDragging = true;
+                    document.body.classList.add('dragging-3d');
+                    
+                    // Calculate drag offset
+                    const planeZ = selectedObject.position.z;
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
+                    const intersection = new THREE.Vector3();
+                    raycaster.ray.intersectPlane(plane, intersection);
+                    
+                    if (intersection) {
+                        dragOffset.x = selectedObject.position.x - intersection.x;
+                        dragOffset.y = selectedObject.position.y - intersection.y;
+                    }
+                    
+                    selectedObject.userData.spinBoost = 0.05;
+                }
+            }
+        }
+
+        function onTouchMove(event) {
+            if (isDragging && selectedObject && event.touches.length === 1) {
+                event.preventDefault();
+                
+                const touch = event.touches[0];
+                mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const planeZ = selectedObject.position.z;
+                const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -planeZ);
+                const intersection = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, intersection);
+                
+                if (intersection) {
+                    selectedObject.position.x = intersection.x + dragOffset.x;
+                    selectedObject.position.y = intersection.y + dragOffset.y;
+                }
+            }
+        }
+
+        function onTouchEnd(event) {
+            if (isDragging && selectedObject) {
+                document.body.classList.remove('dragging-3d');
+                isDragging = false;
+                // Keep hoveredObject for a moment for visual feedback
+                setTimeout(() => {
+                    if (!isDragging) hoveredObject = null;
+                }, 100);
+                selectedObject = null;
+            }
+        }
+
+        function onDoubleTap(obj) {
+            const originalPos = obj.userData.originalPosition;
+            obj.userData.spinBoost = 0.2;
+            
+            const startPos = obj.position.clone();
+            const startTime = Date.now();
+            const duration = 800;
+            
+            function animateBack() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                obj.position.lerpVectors(startPos, originalPos, eased);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateBack);
+                }
+            }
+            animateBack();
+        }
+
+        // Mobile Menu Toggle
+        const menuToggle = document.querySelector('.menu-toggle');
+        const mobileMenu = document.querySelector('.mobile-menu');
+
+        menuToggle.addEventListener('click', () => {
+            menuToggle.classList.toggle('active');
+            mobileMenu.classList.toggle('active');
+        });
+
+        // Mobile menu links - close menu and trigger warp
+        document.querySelectorAll('.mobile-menu a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                menuToggle.classList.remove('active');
+                mobileMenu.classList.remove('active');
+                triggerWarp(this.getAttribute('href'));
+            });
+        });
+
+        // Warp with fade transition
+        function triggerWarp(targetId) {
+            if (isWarping) return;
+            isWarping = true;
+            warpProgress = 0;
+            
+            const main = document.querySelector('main');
+            const target = document.querySelector(targetId);
+            
+            // Flash effect
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: radial-gradient(ellipse at center, rgba(0,255,213,0.3) 0%, transparent 70%);
+                pointer-events: none; z-index: 9998; opacity: 0; transition: opacity 0.2s ease;
+            `;
+            document.body.appendChild(flash);
+            setTimeout(() => flash.style.opacity = '1', 10);
+            setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 300); }, 400);
+
+            // Fade out content
+            main.classList.add('fading');
+            
+            // Scroll midway through warp (while faded out)
+            setTimeout(() => {
+                if (target) {
+                    target.scrollIntoView({ behavior: 'instant' });
+                }
+            }, 600);
+            
+            // Fade in content
+            setTimeout(() => {
+                main.classList.remove('fading');
+                checkReveal();
+            }, 900);
+
+            // Warp animation
+            const warpDuration = 1200;
+            const startTime = Date.now();
+            
+            function warpAnimation() {
+                const elapsed = Date.now() - startTime;
+                warpProgress = Math.min(elapsed / warpDuration, 1);
+                
+                if (warpProgress < 0.3) {
+                    warpSpeed = (warpProgress / 0.3) * maxWarpSpeed;
+                } else if (warpProgress < 0.7) {
+                    warpSpeed = maxWarpSpeed;
+                } else {
+                    warpSpeed = ((1 - warpProgress) / 0.3) * maxWarpSpeed;
+                }
+                
+                if (warpProgress < 1) {
+                    requestAnimationFrame(warpAnimation);
+                } else {
+                    isWarping = false;
+                    warpSpeed = 0;
+                }
+            }
+            
+            warpAnimation();
+        }
+
+        // Main animation loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = clock.getElapsedTime();
+            const positions = particlesGeometry.attributes.position.array;
+            const streakPos = streakGeometry.attributes.position.array;
+
+            // Update interactive objects
+            interactiveObjects.forEach(obj => {
+                const data = obj.userData;
+                
+                // Hover effects
+                const isHovered = obj === hoveredObject;
+                const targetOpacity = isHovered ? data.hoverOpacity : data.baseOpacity;
+                const targetScale = isHovered ? (data.baseScale * 1.2) : data.baseScale;
+                const targetColor = isHovered ? data.hoverColor : data.baseColor;
+                
+                // Handle groups vs single meshes
+                if (data.isGroup && data.materials) {
+                    data.materials.forEach(mat => {
+                        mat.opacity += (targetOpacity - mat.opacity) * 0.1;
+                    });
+                } else if (obj.material) {
+                    obj.material.opacity += (targetOpacity - obj.material.opacity) * 0.1;
+                    
+                    // Color transition
+                    const currentColor = new THREE.Color(obj.material.color);
+                    const target = new THREE.Color(targetColor);
+                    currentColor.lerp(target, 0.05);
+                    obj.material.color = currentColor;
+                }
+                
+                // Smooth scale transitions
+                const currentScale = obj.scale.x;
+                const newScale = currentScale + (targetScale - currentScale) * 0.1;
+                obj.scale.set(newScale, newScale, newScale);
+                
+                // Rotation with spin boost
+                const spinMultiplier = 1 + data.spinBoost;
+                obj.rotation.x += data.rotationSpeed.x * spinMultiplier;
+                obj.rotation.y += data.rotationSpeed.y * spinMultiplier;
+                
+                // Decay spin boost
+                data.spinBoost *= 0.98;
+                
+                // Wandering movement (only when not being dragged)
+                if (data.wanderAngle !== undefined && obj !== selectedObject && !isDragging) {
+                    // Update wander angle - much slower base speed
+                    data.wanderAngle += 0.0008 * data.wanderSpeed;
+                    
+                    // Use unique multipliers per object for more variety
+                    const xFreq1 = data.wanderFreqX || 1;
+                    const xFreq2 = data.wanderFreqX2 || 0.7;
+                    const yFreq1 = data.wanderFreqY || 0.6;
+                    const yFreq2 = data.wanderFreqY2 || 0.4;
+                    const zFreq = data.wanderFreqZ || 0.3;
+                    
+                    // Calculate wander offset - more horizontal movement
+                    const wanderX = (Math.sin(data.wanderAngle * xFreq1) + Math.sin(data.wanderAngle * xFreq2) * 0.5) * data.wanderRadius;
+                    const wanderY = (Math.sin(data.wanderAngle * yFreq1) + Math.cos(data.wanderAngle * yFreq2) * 0.3) * data.wanderRadius * 0.5;
+                    const wanderZ = Math.sin(data.wanderAngle * zFreq) * data.wanderRadius * 0.4;
+                    
+                    // Apply wandering to position (smoothly interpolate)
+                    const targetPosX = data.originalPosition.x + wanderX;
+                    const targetPosY = data.originalPosition.y + wanderY;
+                    const targetPosZ = data.originalPosition.z + wanderZ;
+                    
+                    obj.position.x += (targetPosX - obj.position.x) * 0.015;
+                    obj.position.y += (targetPosY - obj.position.y) * 0.015;
+                    obj.position.z += (targetPosZ - obj.position.z) * 0.015;
+                    
+                    // Additional gentle vertical float
+                    if (data.floatOffset !== undefined) {
+                        const floatY = Math.sin(time * data.floatSpeed * 0.5 + data.floatOffset) * 0.15;
+                        obj.position.y += floatY;
+                    }
+                }
+            });
+
+            if (isWarping || warpSpeed > 0.01) {
+                // Warp mode
+                const targetFOV = 75 + warpSpeed * 25;
+                camera.fov += (targetFOV - camera.fov) * 0.1;
+                camera.updateProjectionMatrix();
+
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    positions[i + 2] += warpSpeed * 0.8;
+                    if (positions[i + 2] > 20) {
+                        positions[i + 2] = -20;
+                        const radius = 2 + Math.random() * 12;
+                        const theta = Math.random() * Math.PI * 2;
+                        positions[i] = Math.cos(theta) * radius;
+                        positions[i + 1] = Math.sin(theta) * radius;
+                    }
+                }
+
+                streakMaterial.opacity = Math.min(warpSpeed / maxWarpSpeed * 0.8, 0.8);
+                
+                for (let i = 0; i < streakCount; i++) {
+                    const streak = streakData[i];
+                    const idx = i * 6;
+                    streak.z += warpSpeed * streak.speed;
+                    if (streak.z > 15) {
+                        streak.z = -15;
+                        const radius = 1 + Math.random() * 10;
+                        const theta = Math.random() * Math.PI * 2;
+                        streak.x = Math.cos(theta) * radius;
+                        streak.y = Math.sin(theta) * radius;
+                    }
+                    streakPos[idx] = streak.x; streakPos[idx + 1] = streak.y;
+                    streakPos[idx + 2] = streak.z - warpSpeed * streak.speed * 3;
+                    streakPos[idx + 3] = streak.x; streakPos[idx + 4] = streak.y;
+                    streakPos[idx + 5] = streak.z;
+                }
+                streakGeometry.attributes.position.needsUpdate = true;
+
+                rings.forEach((ring, i) => {
+                    ring.material.opacity = Math.min(warpSpeed / maxWarpSpeed * 0.15, 0.15);
+                    ring.position.z += warpSpeed * 2;
+                    ring.rotation.z += warpSpeed * 0.05;
+                    if (ring.position.z > 10) ring.position.z = -50;
+                    const scale = 1 + Math.sin(Date.now() * 0.005 + i) * 0.1 * warpSpeed;
+                    ring.scale.set(scale, scale, 1);
+                });
+
+                particlesMaterial.size = 0.03 + warpSpeed * 0.02;
+
+            } else {
+                // Normal mode
+                camera.fov += (75 - camera.fov) * 0.05;
+                camera.updateProjectionMatrix();
+                
+                particlesMaterial.size = 0.03;
+                streakMaterial.opacity *= 0.9;
+                rings.forEach(ring => ring.material.opacity *= 0.9);
+
+                particlesMesh.rotation.y += 0.0003;
+                particlesMesh.rotation.x += 0.0001;
+
+                for (let i = 0; i < particleCount * 3; i += 3) {
+                    positions[i] += velocities[i];
+                    positions[i + 1] += velocities[i + 1];
+                    positions[i + 2] += velocities[i + 2];
+                    if (Math.abs(positions[i]) > 12) velocities[i] *= -1;
+                    if (Math.abs(positions[i + 1]) > 12) velocities[i + 1] *= -1;
+                    if (Math.abs(positions[i + 2]) > 20) velocities[i + 2] *= -1;
+                }
+            }
+
+            particlesGeometry.attributes.position.needsUpdate = true;
+
+            const mouseInfluence = 1 - (warpSpeed / maxWarpSpeed) * 0.8;
+            camera.position.x += (targetX * mouseInfluence - camera.position.x) * 0.05;
+            camera.position.y += (-targetY * mouseInfluence - camera.position.y) * 0.05;
+            camera.lookAt(new THREE.Vector3(0, 0, -10));
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Scroll reveal
+        const reveals = document.querySelectorAll('.reveal');
+        function checkReveal() {
+            reveals.forEach(el => {
+                const windowHeight = window.innerHeight;
+                const elementTop = el.getBoundingClientRect().top;
+                if (elementTop < windowHeight - 150) {
+                    el.classList.add('active');
+                }
+            });
+        }
+        window.addEventListener('scroll', checkReveal);
+        checkReveal();
+
+        // Nav links with warp + fade
+        document.querySelectorAll('.nav-links a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                triggerWarp(this.getAttribute('href'));
+            });
+        });
+
+        // Other links - smooth scroll
+        document.querySelectorAll('a[href^="#"]:not(.nav-links a)').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
