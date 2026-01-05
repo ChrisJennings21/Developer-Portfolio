@@ -59,6 +59,9 @@ export function InteractiveTechLogos({ onHover, onDragStart, onDragEnd }: Intera
         selectedObj.position.x = intersection.x + dragOffset.current.x;
         selectedObj.position.y = intersection.y + dragOffset.current.y;
       }
+
+      // Update tooltip position during drag
+      onHover(selectedObj.userData.name || null, { clientX: event.clientX, clientY: event.clientY });
       return;
     }
 
@@ -136,7 +139,8 @@ export function InteractiveTechLogos({ onHover, onDragStart, onDragEnd }: Intera
     onDragStart();
     document.body.classList.add('dragging-3d');
     gl.domElement.style.cursor = 'grabbing';
-    onHover(null); // Hide tooltip during drag
+    // Keep tooltip visible during drag with current position
+    onHover(hoveredObj.userData.name || null, { clientX: event.clientX, clientY: event.clientY });
 
     // Calculate drag offset
     raycaster.current.setFromCamera(mouse.current, camera);
@@ -185,7 +189,15 @@ export function InteractiveTechLogos({ onHover, onDragStart, onDragEnd }: Intera
       {techLogosConfig.map((config, index) => (
         <group
           key={config.name || `decorative-${index}`}
-          ref={(el) => { logoRefs.current[index] = el; }}
+          ref={(el) => {
+            logoRefs.current[index] = el;
+            // Set userData on the wrapper group so raycasting can find it
+            if (el) {
+              el.userData.name = config.name;
+              el.userData.originalPosition = new THREE.Vector3(...config.position);
+              el.userData.spinBoost = 0;
+            }
+          }}
         >
           <TechLogo
             config={config}

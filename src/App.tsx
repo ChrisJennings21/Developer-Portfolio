@@ -6,7 +6,6 @@ import { Footer } from '@/components/layout/Footer';
 import { CustomCursor } from '@/components/ui/CustomCursor';
 import { TechTooltip } from '@/components/ui/TechTooltip';
 import { Hero } from '@/components/sections/Hero';
-import { CodePreview } from '@/components/sections/CodePreview';
 import { Projects } from '@/components/sections/Projects';
 import { Skills } from '@/components/sections/Skills';
 import { Experience } from '@/components/sections/Experience';
@@ -75,7 +74,6 @@ function AppContent() {
       {/* Main Content */}
       <main className={isFading ? 'fading' : ''}>
         <Hero onHover={handleCursorHover} />
-        <CodePreview />
         <Projects onHover={handleCursorHover} />
         <Skills onHover={handleCursorHover} />
         <Experience />

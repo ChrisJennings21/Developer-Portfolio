@@ -31,9 +31,17 @@ export function WarpProvider({ children }: { children: React.ReactNode }) {
 
     // Scroll to target midway through warp (while content is faded out)
     setTimeout(() => {
-      const target = document.querySelector(targetId);
-      if (target) {
-        target.scrollIntoView({ behavior: 'instant' as ScrollBehavior });
+      const section = document.querySelector(targetId);
+      if (section) {
+        // Try to find the section-label within the section to scroll to it specifically
+        const sectionLabel = section.querySelector('.section-label');
+        const scrollTarget = sectionLabel || section;
+        scrollTarget.scrollIntoView({
+          behavior: 'instant' as ScrollBehavior,
+          block: 'start'
+        });
+        // Add offset to account for fixed navbar and some breathing room
+        window.scrollBy(0, -120);
       }
     }, 600);
 

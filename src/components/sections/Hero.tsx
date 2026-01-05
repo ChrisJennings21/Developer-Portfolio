@@ -14,9 +14,9 @@ export function Hero({ onHover }: HeroProps) {
   return (
     <section className="hero" id="about">
       <div className="hero-content">
-        <div className="hero-label">Full-Stack Software Developer</div>
+        {/* <div className="hero-label">Full-Stack Software Developer</div> */}
         <h1>
-          Building <span className="gradient">enterprise solutions</span> with modern tech
+          <span className="gradient">Chris Jennings.</span> Software Engineer.
         </h1>
         <p className="hero-description">
           Passionate software developer with 5+ years experience in fast-paced agile environments.

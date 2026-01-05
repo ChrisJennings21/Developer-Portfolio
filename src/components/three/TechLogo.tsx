@@ -4,8 +4,7 @@ import * as THREE from 'three';
 import {
   TechLogoConfig,
   createVueGeometry,
-  createAngularGeometry,
-  createPythonHelixCurves
+  createAngularGeometry
 } from '@/data/techLogos';
 
 interface TechLogoProps {
@@ -77,6 +76,8 @@ export function TechLogo({ config, isHovered, isDragging }: TechLogoProps) {
     if (!groupRef.current) return;
 
     const data = groupRef.current.userData as UserData;
+    if (!data || !data.rotationSpeed) return;
+
     const time = state.clock.getElapsedTime();
 
     // Hover effects
@@ -198,19 +199,52 @@ function VueLogo({ config, materialsRef }: { config: TechLogoConfig; materialsRe
   );
 }
 
-// Visual Studio torus knot
+// Visual Studio - two interlocking angular ribbon pieces
 function TorusKnotLogo({ config, materialsRef }: { config: TechLogoConfig; materialsRef: React.MutableRefObject<THREE.Material[]> }) {
+  // Create triangular/arrow shaped ribbon geometry
+  const createRibbonShape = useMemo(() => {
+    const shape = new THREE.Shape();
+    // Arrow/boomerang shape pointing right
+    shape.moveTo(0, 0.08);
+    shape.lineTo(0.8, 0.5);
+    shape.lineTo(0.8, 0.35);
+    shape.lineTo(0.15, 0);
+    shape.lineTo(0.8, -0.35);
+    shape.lineTo(0.8, -0.5);
+    shape.lineTo(0, -0.08);
+    shape.lineTo(0, 0.08);
+    return shape;
+  }, []);
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: 0.15,
+    bevelEnabled: false,
+  };
+
   return (
-    <mesh>
-      <torusKnotGeometry args={[0.8, 0.25, 64, 8, 2, 3]} />
-      <meshBasicMaterial
-        ref={(mat) => { if (mat) materialsRef.current = [mat]; }}
-        color={config.baseColor}
-        wireframe={config.wireframe}
-        transparent
-        opacity={config.baseOpacity}
-      />
-    </mesh>
+    <>
+      {/* Left ribbon piece - darker purple */}
+      <mesh position={[-0.35, 0, 0.08]} rotation={[0, 0, 0]}>
+        <extrudeGeometry args={[createRibbonShape, extrudeSettings]} />
+        <meshBasicMaterial
+          ref={(mat) => { if (mat) materialsRef.current[0] = mat; }}
+          color={0x68217a}
+          transparent
+          opacity={config.baseOpacity * 1.8}
+        />
+      </mesh>
+      {/* Right ribbon piece - lighter purple, rotated 180 */}
+      <mesh position={[0.35, 0, -0.08]} rotation={[0, Math.PI, 0]}>
+        <extrudeGeometry args={[createRibbonShape, extrudeSettings]} />
+        <meshBasicMaterial
+          ref={(mat) => { if (mat) materialsRef.current[1] = mat; }}
+          color={0x9b4dca}
+          transparent
+          opacity={config.baseOpacity * 1.8}
+        />
+      </mesh>
+    </>
   );
 }
 
@@ -231,30 +265,70 @@ function AngularLogo({ config, materialsRef }: { config: TechLogoConfig; materia
   );
 }
 
-// Python double helix
+// Python logo - stylized double helix DNA-like structure
 function PythonLogo({ config, materialsRef }: { config: TechLogoConfig; materialsRef: React.MutableRefObject<THREE.Material[]> }) {
-  const { curve1, curve2 } = useMemo(() => createPythonHelixCurves(), []);
+  // Create a proper intertwined helix effect with torus segments
+  const segments = 8;
+  const helixRadius = 0.4;
+  const helixHeight = 1.6;
 
   return (
     <>
-      <mesh>
-        <tubeGeometry args={[curve1, 50, 0.08, 8, false]} />
-        <meshBasicMaterial
-          ref={(mat) => { if (mat) materialsRef.current[0] = mat; }}
-          color={0x3776ab}
-          transparent
-          opacity={config.baseOpacity}
-        />
-      </mesh>
-      <mesh>
-        <tubeGeometry args={[curve2, 50, 0.08, 8, false]} />
-        <meshBasicMaterial
-          ref={(mat) => { if (mat) materialsRef.current[1] = mat; }}
-          color={0xffd43b}
-          transparent
-          opacity={config.baseOpacity}
-        />
-      </mesh>
+      {/* Blue helix strand */}
+      {Array.from({ length: segments }).map((_, i) => {
+        const t = i / (segments - 1);
+        const angle = t * Math.PI * 2;
+        const y = (t - 0.5) * helixHeight;
+        const x = Math.cos(angle) * helixRadius;
+        const z = Math.sin(angle) * helixRadius;
+        return (
+          <mesh key={`blue-${i}`} position={[x, y, z]}>
+            <sphereGeometry args={[0.12, 8, 8]} />
+            <meshBasicMaterial
+              ref={(mat) => { if (mat && i === 0) materialsRef.current[0] = mat; }}
+              color={0x3776ab}
+              transparent
+              opacity={config.baseOpacity * 1.2}
+            />
+          </mesh>
+        );
+      })}
+
+      {/* Yellow helix strand (offset by PI) */}
+      {Array.from({ length: segments }).map((_, i) => {
+        const t = i / (segments - 1);
+        const angle = t * Math.PI * 2 + Math.PI;
+        const y = (t - 0.5) * helixHeight;
+        const x = Math.cos(angle) * helixRadius;
+        const z = Math.sin(angle) * helixRadius;
+        return (
+          <mesh key={`yellow-${i}`} position={[x, y, z]}>
+            <sphereGeometry args={[0.12, 8, 8]} />
+            <meshBasicMaterial
+              ref={(mat) => { if (mat && i === 0) materialsRef.current[1] = mat; }}
+              color={0xffd43b}
+              transparent
+              opacity={config.baseOpacity * 1.2}
+            />
+          </mesh>
+        );
+      })}
+
+      {/* Connecting bars between strands */}
+      {Array.from({ length: 4 }).map((_, i) => {
+        const t = (i + 0.5) / 4;
+        const y = (t - 0.5) * helixHeight;
+        return (
+          <mesh key={`bar-${i}`} position={[0, y, 0]} rotation={[0, t * Math.PI * 2, 0]}>
+            <boxGeometry args={[helixRadius * 2, 0.06, 0.06]} />
+            <meshBasicMaterial
+              color={0x888888}
+              transparent
+              opacity={config.baseOpacity * 0.6}
+            />
+          </mesh>
+        );
+      })}
     </>
   );
 }
@@ -316,40 +390,69 @@ function SQLLogo({ config, materialsRef }: { config: TechLogoConfig; materialsRe
   );
 }
 
-// TypeScript square with T
+// TypeScript - blue square with white TS on both sides
 function TypeScriptLogo({ config, materialsRef }: { config: TechLogoConfig; materialsRef: React.MutableRefObject<THREE.Material[]> }) {
+  const letterOpacity = config.baseOpacity * 3;
+
+  // Renders TS letters at a given z offset
+  const renderLetters = (zOffset: number, keyPrefix: string) => (
+    <>
+      {/* T - vertical */}
+      <mesh key={`${keyPrefix}-t-vert`} position={[-0.25, -0.1, zOffset]}>
+        <boxGeometry args={[0.15, 0.6, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* T - horizontal */}
+      <mesh key={`${keyPrefix}-t-horiz`} position={[-0.25, 0.25, zOffset]}>
+        <boxGeometry args={[0.45, 0.15, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* S - top */}
+      <mesh key={`${keyPrefix}-s-top`} position={[0.25, 0.25, zOffset]}>
+        <boxGeometry args={[0.35, 0.12, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* S - middle */}
+      <mesh key={`${keyPrefix}-s-mid`} position={[0.25, 0, zOffset]}>
+        <boxGeometry args={[0.35, 0.12, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* S - bottom */}
+      <mesh key={`${keyPrefix}-s-bot`} position={[0.25, -0.25, zOffset]}>
+        <boxGeometry args={[0.35, 0.12, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* S - top-left vertical */}
+      <mesh key={`${keyPrefix}-s-tl`} position={[0.1, 0.125, zOffset]}>
+        <boxGeometry args={[0.12, 0.25, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+      {/* S - bottom-right vertical */}
+      <mesh key={`${keyPrefix}-s-br`} position={[0.4, -0.125, zOffset]}>
+        <boxGeometry args={[0.12, 0.25, 0.1]} />
+        <meshBasicMaterial color={0xffffff} transparent opacity={letterOpacity} />
+      </mesh>
+    </>
+  );
+
   return (
     <>
-      {/* Background square */}
+      {/* Blue background square - solid, not transparent */}
       <mesh>
-        <boxGeometry args={[1.2, 1.2, 0.1]} />
+        <boxGeometry args={[1.4, 1.4, 0.1]} />
         <meshBasicMaterial
           ref={(mat) => { if (mat) materialsRef.current[0] = mat; }}
           color={config.baseColor}
-          transparent
-          opacity={config.baseOpacity}
         />
       </mesh>
-      {/* T vertical bar */}
-      <mesh position={[-0.2, -0.05, 0.1]}>
-        <boxGeometry args={[0.15, 0.6, 0.15]} />
-        <meshBasicMaterial
-          ref={(mat) => { if (mat) materialsRef.current[1] = mat; }}
-          color={0xffffff}
-          transparent
-          opacity={config.baseOpacity * 2}
-        />
-      </mesh>
-      {/* T horizontal bar */}
-      <mesh position={[-0.2, 0.3, 0.1]}>
-        <boxGeometry args={[0.5, 0.12, 0.15]} />
-        <meshBasicMaterial
-          ref={(mat) => { if (mat) materialsRef.current[2] = mat; }}
-          color={0xffffff}
-          transparent
-          opacity={config.baseOpacity * 2}
-        />
-      </mesh>
+
+      {/* Front letters */}
+      {renderLetters(0.1, 'front')}
+
+      {/* Back letters (mirrored by flipping x positions) */}
+      <group scale={[-1, 1, 1]}>
+        {renderLetters(-0.1, 'back')}
+      </group>
     </>
   );
 }
