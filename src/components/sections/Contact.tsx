@@ -57,7 +57,7 @@ export function Contact({ onHover }: ContactProps) {
             Email Me
           </a>
           <a
-            href="https://github.com/chrisjennings214"
+            href="https://github.com/ChrisJennings21"
             className="contact-link"
             target="_blank"
             rel="noopener noreferrer"
@@ -70,7 +70,7 @@ export function Contact({ onHover }: ContactProps) {
             GitHub
           </a>
           <a
-            href="https://www.linkedin.com/in/chris-jennings-a329b5172/"
+            href="https://www.linkedin.com/in/chris-jennings-13643819a/"
             className="contact-link"
             target="_blank"
             rel="noopener noreferrer"
